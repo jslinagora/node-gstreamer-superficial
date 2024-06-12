@@ -20,14 +20,19 @@ Local<Value> gstbuffer_to_v8(GstBuffer *buf) {
 		int length = map.size;
 		Local<Object> frame = createBuffer((char *)data, length);
 		gst_buffer_unmap(buf, &map);
+		gst_buffer_unref(buf);
 		return frame;
 	}
+	gst_buffer_unref(buf);
 	return Nan::Undefined();
 }
 
 Local<Value> gstsample_to_v8(GstSample *sample) {
 	if(!sample) return Nan::Null();
-	return gstbuffer_to_v8(gst_sample_get_buffer(sample));
+	GstBuffer *buffer = gst_sample_get_buffer(sample);
+        Local<Value> result = gstbuffer_to_v8(buffer);
+        gst_sample_unref(sample);
+        return result;
 }
 
 Local<Value> gstvaluearray_to_v8(const GValue *gv) {
@@ -95,7 +100,9 @@ Local<Value> gvalue_to_v8(const GValue *gv) {
 		GValue b = G_VALUE_INIT;
 		g_value_init(&b, G_TYPE_STRING);
 		g_value_transform(gv, &b);
-		return gchararray_to_v8(&b);
+		Local<Value> result = gchararray_to_v8(&b);
+                g_value_unset(&b);
+                return result;
 	}
 
 	return Nan::Undefined();
@@ -111,6 +118,7 @@ void v8_to_gvalue(Local<Value> v, GValue *gv, GParamSpec *spec) {
 	        GstCaps* caps = gst_caps_from_string(*value);
 	        g_value_init(gv, GST_TYPE_CAPS);
 	        g_value_set_boxed(gv, caps);
+		gst_caps_unref(caps);
 	    } else {
 	        g_value_init(gv, G_TYPE_STRING);
             g_value_set_string(gv, *value);

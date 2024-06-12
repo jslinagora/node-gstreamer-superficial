@@ -20,11 +20,16 @@ Pipeline::Pipeline(const char *launch) {
 	if(err) {
 		fprintf(stderr,"GstError: %s\n", err->message);
 		Nan::ThrowError(err->message);
+		g_error_free(err);
 	}
 }
 
 Pipeline::Pipeline(GstPipeline* pipeline) {
 	this->pipeline = pipeline;
+}
+
+Pipeline::~Pipeline() {
+    gst_object_unref(pipeline);
 }
 
 void Pipeline::Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE exports) {
@@ -149,15 +154,20 @@ NAN_METHOD(Pipeline::QueryDuration) {
 
 void Pipeline::forceKeyUnit(GObject *sink, int cnt) {
 	GstPad *sinkpad = gst_element_get_static_pad(GST_ELEMENT(sink), "sink");
-	gst_pad_push_event(sinkpad,(GstEvent*) gst_video_event_new_upstream_force_key_unit(GST_CLOCK_TIME_NONE, TRUE, cnt));
+	if (sinkpad) {
+		gst_pad_push_event(sinkpad,(GstEvent*) gst_video_event_new_upstream_force_key_unit(GST_CLOCK_TIME_NONE, TRUE, cnt));
+		gst_object_unref(sinkpad);
+	}
 }
 
 NAN_METHOD(Pipeline::ForceKeyUnit) {
 	Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
 	Nan::Utf8String name(info[0]);
 	GObject *o = obj->findChild(*name);
-	int cnt(Nan::To<Int32>(info[1]).ToLocalChecked()->Value());
-	obj->forceKeyUnit(o, cnt);
+	if (o) {
+		int cnt(Nan::To<Int32>(info[1]).ToLocalChecked()->Value());
+		obj->forceKeyUnit(o, cnt);
+	}
 	info.GetReturnValue().Set(Nan::True());
 }
 
@@ -170,10 +180,12 @@ NAN_METHOD(Pipeline::FindChild) {
 	Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
 	Nan::Utf8String name(info[0]);
 	GObject *o = obj->findChild(*name);
-	if(o)
+	if(o) {
 		info.GetReturnValue().Set(GObjectWrap::NewInstance(info, o));
-	else
+		gst_object_unref(o);
+	} else {
 		info.GetReturnValue().Set(Nan::Undefined());
+	}
 }
 
 void Pipeline::setPad(GObject *elem, const char *attribute, const char *padName) {
@@ -182,6 +194,7 @@ void Pipeline::setPad(GObject *elem, const char *attribute, const char *padName)
 		return;
 	}
 	g_object_set(elem, attribute, pad, NULL);
+	gst_object_unref(pad);
 }
 
 NAN_METHOD(Pipeline::SetPad) {
@@ -195,6 +208,7 @@ NAN_METHOD(Pipeline::SetPad) {
 	Nan::Utf8String attribute(info[1]);
 	Nan::Utf8String padName(info[2]);
 	obj->setPad(o, *attribute, *padName);
+	gst_object_unref(o);
 }
 
 GObject * Pipeline::getPad(GObject* elem, const char *padName ) {
@@ -214,9 +228,11 @@ NAN_METHOD(Pipeline::GetPad) {
 	GObject *pad = obj->getPad(o, *padName);
 	if(pad) {
 		info.GetReturnValue().Set(GObjectWrap::NewInstance(info, pad));
+		gst_object_unref(pad);
 	} else {
 		info.GetReturnValue().Set(Nan::Undefined());
 	}
+	gst_object_unref(o);
 }
 
 
@@ -245,6 +261,7 @@ void Pipeline::_doPollBus(uv_work_t *req) {
 	GstBus *bus = gst_element_get_bus(GST_ELEMENT(br->obj->pipeline));
 	if(!bus) return;
 	br->msg = gst_bus_timed_pop(bus, GST_CLOCK_TIME_NONE);
+	gst_object_unref(bus);
 }
 
 void Pipeline::_polledBus(uv_work_t *req, int n) {
@@ -269,6 +286,8 @@ void Pipeline::_polledBus(uv_work_t *req, int n) {
 			Nan::Set(m,Nan::New("name").ToLocalChecked(), Nan::New(name).ToLocalChecked());
 			gst_message_parse_error(br->msg, &err, NULL);
 			Nan::Set(m,Nan::New("message").ToLocalChecked(), Nan::New(err->message).ToLocalChecked());
+			g_error_free(err);
+			g_free(name);
 		}
 
 		Local<Value> argv[1] = { m };

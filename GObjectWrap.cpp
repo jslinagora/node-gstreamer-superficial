@@ -46,6 +46,7 @@ Local<Value> GObjectWrap::NewInstance( const Nan::FunctionCallbackInfo<Value>& i
 		Local<String> name = String::NewFromUtf8(isolate, property->name, v8::NewStringType::kNormal).ToLocalChecked();
 		Nan::SetAccessor(instance, name, GObjectWrap::GetProperty, GObjectWrap::SetProperty);
 	}
+	g_free(properties);
 
 	if(GST_IS_APP_SINK(obj)) {
         Nan::SetMethod(instance, "pull", GstAppSinkPull);
@@ -74,6 +75,7 @@ NAN_GETTER(GObjectWrap::GetProperty) {
 		g_object_get_property(o, *name, &gv);
 
 		info.GetReturnValue().Set(gvalue_to_v8(&gv));
+		g_value_unset(&gv);
 	}
 }
 
@@ -88,6 +90,7 @@ NAN_SETTER(GObjectWrap::SetProperty) {
 		memset( &gv, 0, sizeof( gv ) );
 		v8_to_gvalue( value, &gv, spec);
 		g_object_set_property( o, *name, &gv );
+		g_value_unset(&gv);
 	}
 }
 
@@ -96,7 +99,12 @@ class PullWorker : public Nan::AsyncWorker {
 		PullWorker(Nan::Callback *callback, GstAppSink *appsink)
 		: AsyncWorker(callback,"node-gst-superficial.PullWorker"), appsink(appsink) {};
 
-		~PullWorker() {}
+		~PullWorker() {
+			if (sample) {
+				gst_sample_unref(sample);
+			}
+			delete callback;
+		}
 
 		void Execute() {
 			sample = gst_app_sink_pull_sample(appsink);
@@ -155,7 +163,7 @@ NAN_METHOD(GObjectWrap::GstAppSrcPush) {
             }
 
             gst_app_src_push_buffer(GST_APP_SRC(obj->obj), gst_buffer);
-           // gst_buffer_unref(gst_buffer);
+            gst_buffer_unref(gst_buffer);
         }
         // TODO throw an error if arg is not a buffer object?
     }
