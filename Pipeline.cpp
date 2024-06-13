@@ -29,7 +29,7 @@ Pipeline::Pipeline(GstPipeline* pipeline) {
 }
 
 Pipeline::~Pipeline() {
-	throw std::runtime_error("I'm in Pipeline destructor");
+	std::abort();
     gst_object_unref(pipeline);
 }
 
