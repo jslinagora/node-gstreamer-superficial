@@ -76,9 +76,8 @@ NAN_METHOD(Pipeline::New) {
 }
 
 void Pipeline::flush() {
-	gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
-	gst_element_send_event(GST_ELEMENT(pipeline), gst_event_new_flush_start());
-	    gst_element_send_event(GST_ELEMENT(pipeline), gst_event_new_flush_stop(FALSE));
+	//gst_element_send_event(GST_ELEMENT(pipeline), gst_event_new_flush_start());
+	//    gst_element_send_event(GST_ELEMENT(pipeline), gst_event_new_flush_stop(FALSE));
 	gst_object_unref(pipeline);
 }
 
