@@ -76,10 +76,15 @@ NAN_METHOD(Pipeline::New) {
 	info.GetReturnValue().Set(info.This());
 }
 
-NAN_METHOD(Pipeline::Destroy) {
+void Pipeline::destroy() {
     Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
     delete obj;
     info.GetReturnValue().Set(Nan::Undefined());
+}
+
+NAN_METHOD(Pipeline::Destroy) {
+	Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
+	obj->destroy();
 }
 
 void Pipeline::play() {
