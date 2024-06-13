@@ -13,7 +13,7 @@ class Pipeline : public Nan::ObjectWrap {
 		void play();
 		void pause();
 		void stop();
-		void destroy();
+		void flush();
 		gboolean seek(gint64 time_nanoseconds, GstSeekFlags flags);
 		gint64 queryPosition();
 		gint64 queryDuration();
@@ -47,7 +47,7 @@ class Pipeline : public Nan::ObjectWrap {
 		static NAN_METHOD(FindChild);
 		static NAN_METHOD(SetPad);
 		static NAN_METHOD(GetPad);
-		static NAN_METHOD(Destroy);
+		static NAN_METHOD(Flush);
 
 		static void _doPollBus( uv_work_t *req );
 		static void _polledBus( uv_work_t *req, int );

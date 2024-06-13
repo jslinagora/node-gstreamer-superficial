@@ -31,7 +31,6 @@ Pipeline::Pipeline(GstPipeline* pipeline) {
 
 Pipeline::~Pipeline() {
 	printf("Pipeline destructor called\n");
-    gst_object_unref(pipeline);
 }
 
 void Pipeline::Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE exports) {
@@ -54,7 +53,7 @@ void Pipeline::Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE exports) {
 	Nan::SetPrototypeMethod(ctor, "setPad", SetPad);
 	Nan::SetPrototypeMethod(ctor, "getPad", GetPad);
 	Nan::SetPrototypeMethod(ctor, "pollBus", PollBus);
-	Nan::SetPrototypeMethod(ctor, "destroy", Destroy);
+	Nan::SetPrototypeMethod(ctor, "flush", Flush);
 
 	Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
 	Nan::SetAccessor(proto, Nan::New("auto-flush-bus").ToLocalChecked(), GetAutoFlushBus, SetAutoFlushBus);
@@ -76,15 +75,17 @@ NAN_METHOD(Pipeline::New) {
 	info.GetReturnValue().Set(info.This());
 }
 
-void Pipeline::destroy() {
-    Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
-    delete obj;
-    info.GetReturnValue().Set(Nan::Undefined());
+void Pipeline::flush() {
+	gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+	gst_element_send_event(pipeline, gst_event_new_flush_start());
+	    gst_element_send_event(pipeline, gst_event_new_flush_stop(FALSE));
+	gst_object_unref(pipeline);
+
 }
 
-NAN_METHOD(Pipeline::Destroy) {
+NAN_METHOD(Pipeline::Flush) {
 	Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
-	obj->destroy();
+	obj->flush();
 }
 
 void Pipeline::play() {
