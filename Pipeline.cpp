@@ -14,6 +14,7 @@ Nan::Persistent<Function> Pipeline::constructor;
 #define DOUBLE_TO_NANOS(secs)((guint64)(secs*1000000000))
 
 Pipeline::Pipeline(const char *launch) {
+	printf("Pipeline constructor called with launch: %s\n", launch);
 	GError *err = NULL;
 
 	pipeline = (GstPipeline*)GST_BIN(gst_parse_launch(launch, &err));
@@ -29,7 +30,7 @@ Pipeline::Pipeline(GstPipeline* pipeline) {
 }
 
 Pipeline::~Pipeline() {
-	std::abort();
+	printf("Pipeline destructor called\n");
     gst_object_unref(pipeline);
 }
 
@@ -40,7 +41,6 @@ void Pipeline::Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE exports) {
 	ctor->InstanceTemplate()->SetInternalFieldCount(1);
 	ctor->SetClassName(Nan::New("Pipeline").ToLocalChecked());
 
-	Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
 	// Prototype
 	Nan::SetPrototypeMethod(ctor, "play", Play);
 	Nan::SetPrototypeMethod(ctor, "pause", Pause);
@@ -54,7 +54,9 @@ void Pipeline::Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE exports) {
 	Nan::SetPrototypeMethod(ctor, "setPad", SetPad);
 	Nan::SetPrototypeMethod(ctor, "getPad", GetPad);
 	Nan::SetPrototypeMethod(ctor, "pollBus", PollBus);
+	Nan::SetPrototypeMethod(ctor, "destroy", Destroy);
 
+	Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
 	Nan::SetAccessor(proto, Nan::New("auto-flush-bus").ToLocalChecked(), GetAutoFlushBus, SetAutoFlushBus);
 	Nan::SetAccessor(proto, Nan::New("delay").ToLocalChecked(), GetDelay, SetDelay);
 	Nan::SetAccessor(proto, Nan::New("latency").ToLocalChecked(), GetLatency, SetLatency);
@@ -72,6 +74,12 @@ NAN_METHOD(Pipeline::New) {
 	Pipeline* obj = new Pipeline(*launch);
 	obj->Wrap(info.This());
 	info.GetReturnValue().Set(info.This());
+}
+
+NAN_METHOD(Pipeline::Destroy) {
+    Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
+    delete obj;
+    info.GetReturnValue().Set(Nan::Undefined());
 }
 
 void Pipeline::play() {
