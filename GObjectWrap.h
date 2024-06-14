@@ -16,6 +16,7 @@ class GObjectWrap : public Nan::ObjectWrap {
 		void play();
 		void pause();
 		void stop();
+		void flush();
 
 	private:
 		GObjectWrap() {}
