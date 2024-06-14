@@ -14,7 +14,6 @@ Nan::Persistent<Function> Pipeline::constructor;
 #define DOUBLE_TO_NANOS(secs)((guint64)(secs*1000000000))
 
 Pipeline::Pipeline(const char *launch) {
-	printf("Pipeline constructor called with launch: %s\n", launch);
 	GError *err = NULL;
 
 	pipeline = (GstPipeline*)GST_BIN(gst_parse_launch(launch, &err));
@@ -30,7 +29,6 @@ Pipeline::Pipeline(GstPipeline* pipeline) {
 }
 
 Pipeline::~Pipeline() {
-	printf("Pipeline destructor called\n");
 }
 
 void Pipeline::Init(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE exports) {
@@ -78,7 +76,8 @@ NAN_METHOD(Pipeline::New) {
 void Pipeline::flush() {
 	//gst_element_send_event(GST_ELEMENT(pipeline), gst_event_new_flush_start());
 	//    gst_element_send_event(GST_ELEMENT(pipeline), gst_event_new_flush_stop(FALSE));
-	gst_object_unref(GST_ELEMENT(pipeline));
+	gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
+	gst_object_unref(pipeline);
 }
 
 NAN_METHOD(Pipeline::Flush) {
